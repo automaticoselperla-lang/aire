@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aire Haier</title>
+<meta name="theme-color" content="#0f1720">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Aire">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: una columna tipo mando a distancia; el dial manda, los controles debajo en bandejas */
+:root{
+  --bg:#eef2f5; --panel:#ffffff; --ink:#15202b; --muted:#5d6b78; --line:#d6dee5; --soft:#e3e9ee;
+  --cool:#2f7fc1; --heat:#d9692b; --dry:#1f8f86; --fan:#6b6fa3; --auto:#4f8a3f; --off:#8a96a1;
+  --ok:#2f8a4f; --bad:#c2453a;
+  --mode:var(--cool);
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --r:14px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1720; --panel:#17212c; --ink:#e8eef3; --muted:#93a2b0; --line:#273443; --soft:#1f2b37;
+    --cool:#5aa7e6; --heat:#f08a4b; --dry:#3cb7ab; --fan:#9599cf; --auto:#7cb86a; --off:#6c7a87;
+    --ok:#4cb071; --bad:#e2675c; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1720; --panel:#17212c; --ink:#e8eef3; --muted:#93a2b0; --line:#273443; --soft:#1f2b37;
+  --cool:#5aa7e6; --heat:#f08a4b; --dry:#3cb7ab; --fan:#9599cf; --auto:#7cb86a; --off:#6c7a87;
+  --ok:#4cb071; --bad:#e2675c; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+:root{--on-mode:#ffffff}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --on-mode:#0f1720 } }
+:root[data-theme="dark"]{ --on-mode:#0f1720 }
+.count.idle{color:var(--muted); font-weight:400}
+html,body{margin:0}
+body{background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.45;
+  padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px));
+  padding-block:max(12px, env(safe-area-inset-top,0px)) max(24px, env(safe-area-inset-bottom,0px));}
+.wrap{max-width:460px; margin:0 auto; display:grid; gap:14px}
+header{display:flex; align-items:center; justify-content:space-between; gap:12px}
+h1{font-family:var(--f-display); font-weight:600; font-size:1.35rem; margin:0; letter-spacing:-.01em}
+.pill{display:inline-flex; align-items:center; gap:6px; font-size:.8rem; padding:4px 10px; border-radius:999px; background:var(--soft); color:var(--muted); white-space:nowrap}
+.pill i{width:8px; height:8px; border-radius:50%; background:var(--off)}
+.pill.ok i{background:var(--ok)} .pill.bad i{background:var(--bad)}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:16px}
+.label{font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 8px}
+button{font:inherit; color:inherit; cursor:pointer}
+button:focus-visible, input:focus-visible{outline:2px solid var(--mode); outline-offset:2px}
+
+/* Dial */
+.dial{position:relative; display:grid; place-items:center}
+.dial svg{width:min(280px, 78vw); height:auto; display:block}
+.track{stroke:var(--soft)} .value{stroke:var(--mode); transition:stroke-dashoffset .35s ease, stroke .3s}
+.room{fill:var(--ink)}
+.center{position:absolute; inset:0; display:grid; place-content:center; text-align:center; pointer-events:none}
+.big{font-family:var(--f-display); font-weight:600; font-size:clamp(3.6rem, 17vw, 4.6rem); line-height:1; font-variant-numeric:tabular-nums; color:var(--ink)}
+.big small{font-size:.45em; vertical-align:top; margin-left:2px; color:var(--muted)}
+.sub{font-size:.85rem; color:var(--muted); margin-top:6px}
+.offtxt{font-family:var(--f-display); font-size:1.6rem; color:var(--muted)}
+.dial-row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:4px}
+.step{width:56px; height:56px; border-radius:50%; border:1px solid var(--line); background:var(--soft); font-size:1.6rem; display:grid; place-items:center}
+.step:active{transform:scale(.96)}
+.power{display:flex; align-items:center; gap:8px; padding:12px 18px; border-radius:999px; border:1px solid var(--line); background:var(--soft); font-weight:700}
+.power svg{width:18px; height:18px}
+.power.on{background:var(--mode); border-color:var(--mode); color:var(--on-mode)}
+
+/* Segmentos */
+.seg{display:grid; gap:6px}
+.seg.c3{grid-template-columns:repeat(3,1fr)} .seg.c4{grid-template-columns:repeat(4,1fr)}
+.seg button{border:1px solid var(--line); background:var(--soft); border-radius:10px; padding:10px 4px; font-size:.86rem; display:grid; justify-items:center; gap:4px; min-width:0}
+.seg button svg{width:22px; height:22px}
+.seg button[aria-pressed="true"]{background:var(--mode); border-color:var(--mode); color:var(--on-mode)}
+.seg button:disabled{opacity:.45; cursor:not-allowed}
+.modes button[data-v="cool"]{--mode:var(--cool)} .modes button[data-v="heat"]{--mode:var(--heat)}
+.modes button[data-v="dry"]{--mode:var(--dry)} .modes button[data-v="fan_only"]{--mode:var(--fan)}
+.modes button[data-v="heat_cool"]{--mode:var(--auto)}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+@media (max-width:380px){ .grid2{grid-template-columns:1fr} }
+
+/* Interruptores */
+.toggles{display:grid; gap:10px}
+.tg{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:4px 0}
+.tg span small{display:block; color:var(--muted); font-size:.78rem}
+.sw{width:50px; height:30px; border-radius:999px; border:1px solid var(--line); background:var(--soft); position:relative; flex:none}
+.sw::after{content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:var(--panel); box-shadow:0 1px 2px rgba(0,0,0,.25); transition:transform .2s}
+.sw[aria-checked="true"]{background:var(--mode); border-color:var(--mode)}
+.sw[aria-checked="true"]::after{transform:translateX(20px)}
+
+/* Temporizadores */
+.timer{display:grid; gap:8px}
+.timer + .timer{border-top:1px solid var(--line); padding-top:14px; margin-top:6px}
+.trow{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
+.trow strong{font-family:var(--f-display); font-weight:600}
+.count{font-variant-numeric:tabular-nums; color:var(--mode); font-weight:700}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chips button{border:1px solid var(--line); background:var(--soft); border-radius:999px; padding:7px 12px; font-size:.85rem}
+.chips button.cancel{color:var(--bad)}
+.custom{display:flex; gap:6px; align-items:center}
+.custom input{width:80px; font:inherit; padding:7px 10px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--ink)}
+
+/* Login */
+.login{display:grid; gap:12px}
+.login label{display:grid; gap:4px; font-size:.85rem; color:var(--muted)}
+.login input[type=text], .login input[type=password]{font:inherit; padding:11px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--ink)}
+.login .chk{display:flex; gap:8px; align-items:center; color:var(--ink)}
+.btn{border:0; border-radius:10px; padding:12px; font-weight:700; background:var(--cool); color:var(--on-mode)}
+.btn.ghost{background:transparent; border:1px solid var(--line); color:var(--ink)}
+.err{color:var(--bad); font-size:.85rem; min-height:1.2em; margin:0}
+.foot{display:flex; justify-content:space-between; gap:10px; font-size:.8rem; color:var(--muted)}
+.foot button{background:none; border:0; color:var(--muted); text-decoration:underline; padding:0}
+.toast{position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:999px; font-size:.88rem; opacity:0; transition:opacity .25s; pointer-events:none; max-width:calc(100% - 32px)}
+.toast.show{opacity:1}
+.dim{opacity:.55}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Aire Haier</h1>
+    <span id="conn" class="pill"><i></i><span id="connTxt">Sin conectar</span></span>
+  </header>
+
+  <!-- Acceso -->
+  <section id="loginView" class="card login" hidden>
+    <p class="label">Conectar con tu servidor</p>
+    <label for="user">Usuario<input id="user" type="text" autocomplete="username" value="movil"></label>
+    <label for="pass">Contraseña<input id="pass" type="password" autocomplete="current-password"></label>
+    <label class="chk" for="remember"><input id="remember" type="checkbox" checked> Recordar en este móvil</label>
+    <p id="loginErr" class="err" role="alert"></p>
+    <button id="btnLogin" class="btn">Conectar</button>
+    <button id="btnDemo" class="btn ghost">Ver demostración</button>
+  </section>
+
+  <!-- Panel -->
+  <main id="appView" class="wrap" hidden>
+    <section class="card">
+      <div class="dial">
+        <svg viewBox="0 0 240 240" aria-hidden="true">
+          <path class="track" d="M49.29 190.71 A100 100 0 1 1 190.71 190.71" fill="none" stroke-width="14" stroke-linecap="round"/>
+          <path id="arc" class="value" d="M49.29 190.71 A100 100 0 1 1 190.71 190.71" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="471.24" stroke-dashoffset="471.24"/>
+          <circle id="roomDot" class="room" r="5" cx="-20" cy="-20"/>
+          <text x="58" y="222" font-size="11" fill="currentColor" style="fill:var(--muted)">16°</text>
+          <text x="166" y="222" font-size="11" style="fill:var(--muted)">30°</text>
+        </svg>
+        <div class="center">
+          <div id="onBox"><div class="big" id="setTxt">--<small>°C</small></div><div class="sub">Temperatura objetivo</div></div>
+          <div id="offBox" hidden><div class="offtxt">Apagado</div></div>
+          <div class="sub" id="roomTxt">Habitación: -- °C</div>
+        </div>
+      </div>
+      <div class="dial-row">
+        <button class="step" id="minus" aria-label="Bajar temperatura">−</button>
+        <button class="power" id="power" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+          <span id="powerTxt">Encender</span>
+        </button>
+        <button class="step" id="plus" aria-label="Subir temperatura">+</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <p class="label">Modo</p>
+      <div class="seg c3 modes" id="modes"></div>
+    </section>
+
+    <div class="grid2">
+      <section class="card">
+        <p class="label">Ventilador</p>
+        <div class="seg c3" id="fan" style="grid-template-columns:1fr 1fr"></div>
+      </section>
+      <section class="card">
+        <p class="label">Lamas</p>
+        <div class="seg" id="swing" style="grid-template-columns:1fr 1fr"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <p class="label">Función</p>
+      <div class="seg c3" id="preset"></div>
+    </section>
+
+    <section class="card">
+      <p class="label">Temporizadores</p>
+      <div class="timer" id="tOff"></div>
+      <div class="timer" id="tOn"></div>
+    </section>
+
+    <section class="card toggles">
+      <p class="label" style="margin:0">Unidad</p>
+      <div class="tg"><span>Luz del display<small>Pantalla de la unidad interior</small></span><button class="sw" id="swDisplay" role="switch" aria-checked="false" aria-label="Luz del display"></button></div>
+      <div class="tg"><span>Health<small>Ionizador / purificación, si tu modelo lo tiene</small></span><button class="sw" id="swHealth" role="switch" aria-checked="false" aria-label="Health"></button></div>
+    </section>
+
+    <div class="foot"><span id="footInfo">casa/aire</span><button id="btnLogout">Cerrar sesión</button></div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script>
+(function(){
+const BROKER = 'wss://w3e101fc.ala.eu-central-1.emqxsl.com:8084/mqtt';
+const P = 'casa/aire/';
+const MIN = 16, MAX = 30, ARC = 471.24;
+
+const MODES = [
+  ['cool','Frío','<path d="M12 2v20M4 6l16 12M20 6L4 18"/>'],
+  ['heat','Calor','<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'],
+  ['heat_cool','Auto','<path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>'],
+  ['dry','Seco','<path d="M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z"/>'],
+  ['fan_only','Ventilar','<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-7 4-7s3 4-2 7M14 12c4 0 7 1 7 4s-4 3-7-2M12 14c0 4-1 7-4 7s-3-4 2-7M10 12c-4 0-7-1-7-4s4-3 7 2"/>']
+];
+const FANS = [['auto','Auto'],['low','Baja'],['medium','Media'],['high','Alta']];
+const SWINGS = [['off','Fijas'],['vertical','Vertical'],['horizontal','Horizontal'],['both','Ambas']];
+const PRESETS = [['none','Normal'],['boost','Turbo'],['comfort','Confort']];
+const QUICK = [15,30,60,120,240];
+
+const S = {status:null, modo:null, temp:null, actual:null, vent:null, swing:null, preset:null, display:null, health:null, apagar:0, encender:0};
+let client = null, demo = false, pendingTemp = null, tempTimer = null, lastMode = 'cool';
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try{ return localStorage.getItem(k) }catch(e){ return null } },
+  set(k,v){ try{ localStorage.setItem(k,v) }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k) }catch(e){} }
+};
+lastMode = store.get('aire.lastMode') || 'cool';
+
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2200); }
+function setConn(kind, txt){ const c=$('conn'); c.className='pill'+(kind?' '+kind:''); $('connTxt').textContent=txt; }
+function fmtMin(m){ m=Math.round(m); const h=Math.floor(m/60), r=m%60; return h? (h+' h'+(r? ' '+String(r).padStart(2,'0')+' min':'')) : (r+' min'); }
+
+/* ---------- construir controles ---------- */
+function icon(p){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>'; }
+function buildSeg(el, items, withIcon, onPick){
+  el.innerHTML='';
+  items.forEach(([v,l,ic])=>{
+    const b=document.createElement('button'); b.type='button'; b.dataset.v=v; b.setAttribute('aria-pressed','false');
+    b.innerHTML=(withIcon&&ic? icon(ic):'')+'<span>'+l+'</span>';
+    b.addEventListener('click',()=>onPick(v)); el.appendChild(b);
+  });
+}
+buildSeg($('modes'), MODES, true, v=>{ pub('modo', v); optimistic('modo', v); });
+buildSeg($('fan'), FANS, false, v=>{ pub('ventilador', v); optimistic('vent', v); });
+buildSeg($('swing'), SWINGS, false, v=>{ pub('swing', v); optimistic('swing', v); });
+buildSeg($('preset'), PRESETS, false, v=>{ pub('preset', v); optimistic('preset', v); });
+
+function buildTimer(el, key, topic, title, verb){
+  el.innerHTML =
+    '<div class="trow"><strong>'+title+'</strong><span class="count" id="'+key+'Count"></span></div>'+
+    '<div class="chips" id="'+key+'Chips"></div>'+
+    '<div class="custom"><label for="'+key+'In" class="sub" style="margin:0">Otro:</label><input id="'+key+'In" type="number" min="1" max="720" inputmode="numeric" placeholder="min"><button type="button" class="btn ghost" id="'+key+'Go" style="padding:7px 12px">'+verb+'</button></div>';
+  const chips=$(key+'Chips');
+  QUICK.forEach(m=>{ const b=document.createElement('button'); b.type='button'; b.textContent=fmtMin(m); b.addEventListener('click',()=>setTimer(key,topic,m)); chips.appendChild(b); });
+  const c=document.createElement('button'); c.type='button'; c.className='cancel'; c.id=key+'Cancel'; c.textContent='Cancelar'; c.addEventListener('click',()=>setTimer(key,topic,0)); chips.appendChild(c);
+  $(key+'Go').addEventListener('click',()=>{ const v=parseInt($(key+'In').value,10); if(!(v>=1&&v<=720)){ toast('Escribe entre 1 y 720 minutos'); return; } setTimer(key,topic,v); $(key+'In').value=''; });
+}
+buildTimer($('tOff'),'apagar','apagar_en','Apagar en','Programar');
+buildTimer($('tOn'),'encender','encender_en','Encender en','Programar');
+function setTimer(key, topic, m){ pub(topic, m); optimistic(key, m); toast(m? (key==='apagar'?'Se apagará en ':'Se encenderá en ')+fmtMin(m) : 'Temporizador cancelado'); }
+
+/* ---------- acciones ---------- */
+function pub(sub, val){
+  if(demo) return;
+  if(!client || !client.connected){ toast('Sin conexión con el servidor'); return; }
+  client.publish(P+sub+'/set', String(val), {qos:0, retain:false});
+}
+function optimistic(k, v){ S[k]=v; if(k==='modo' && v!=='off'){ lastMode=v; store.set('aire.lastMode',v); } render(); }
+
+$('power').addEventListener('click',()=>{
+  const on = S.modo && S.modo!=='off';
+  const v = on? 'off' : lastMode;
+  pub('modo', v); optimistic('modo', v);
+});
+function nudge(d){
+  const base = pendingTemp ?? S.temp ?? 24;
+  const v = Math.max(MIN, Math.min(MAX, Math.round(base)+d));
+  pendingTemp = v; render();
+  clearTimeout(tempTimer);
+  tempTimer = setTimeout(()=>{ pub('temp', v); S.temp=v; pendingTemp=null; render(); }, 700);
+}
+$('minus').addEventListener('click',()=>nudge(-1));
+$('plus').addEventListener('click',()=>nudge(1));
+function sw(id, topic, key){
+  $(id).addEventListener('click',()=>{ const v = S[key]==='ON' ? 'OFF':'ON'; pub(topic, v); optimistic(key, v); });
+}
+sw('swDisplay','display','display'); sw('swHealth','health','health');
+
+/* ---------- pintar ---------- */
+function press(el, val){ el.querySelectorAll('button[data-v]').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.v===val))); }
+function modeVar(m){ return ({cool:'--cool',heat:'--heat',heat_cool:'--auto',dry:'--dry',fan_only:'--fan'})[m] || '--off'; }
+function pointAt(frac){ const a=(135+270*frac)*Math.PI/180; return [120+100*Math.cos(a), 120+100*Math.sin(a)]; }
+
+function render(){
+  const on = !!S.modo && S.modo!=='off';
+  document.documentElement.style.setProperty('--mode', 'var('+modeVar(on? S.modo : 'off')+')');
+  const t = pendingTemp ?? S.temp;
+  $('setTxt').innerHTML = (t!=null && !isNaN(t)? Math.round(t) : '--')+'<small>°C</small>';
+  $('onBox').hidden = !on; $('offBox').hidden = on;
+  const frac = (t!=null && !isNaN(t))? (Math.max(MIN,Math.min(MAX,t))-MIN)/(MAX-MIN) : 0;
+  $('arc').style.strokeDashoffset = on? ARC*(1-frac) : ARC;
+  if(S.actual!=null && !isNaN(S.actual)){
+    $('roomTxt').textContent = 'Habitación: '+S.actual.toFixed(1).replace('.',',')+' °C';
+    const [x,y]=pointAt((Math.max(MIN,Math.min(MAX,S.actual))-MIN)/(MAX-MIN)); const d=$('roomDot'); d.setAttribute('cx',x); d.setAttribute('cy',y);
+  } else { $('roomTxt').textContent='Habitación: -- °C'; }
+  $('power').classList.toggle('on', on); $('power').setAttribute('aria-pressed', String(on)); $('powerTxt').textContent = on? 'Apagar':'Encender';
+  $('minus').disabled = $('plus').disabled = !on;
+  press($('modes'), S.modo); press($('fan'), S.vent); press($('swing'), S.swing); press($('preset'), S.preset);
+  [ $('fan'), $('swing'), $('preset') ].forEach(el=>el.classList.toggle('dim', !on));
+  $('swDisplay').setAttribute('aria-checked', String(S.display==='ON'));
+  $('swHealth').setAttribute('aria-checked', String(S.health==='ON'));
+  [['apagar','Se apaga en '],['encender','Se enciende en ']].forEach(([k,txt])=>{
+    const m=+S[k]||0; $(k+'Count').textContent = m>0? txt+fmtMin(m) : 'Desactivado'; $(k+'Count').classList.toggle('idle', !(m>0)); $(k+'Cancel').hidden = !(m>0);
+  });
+}
+
+/* ---------- MQTT ---------- */
+const MAP = {modo:'modo', temp:'temp', temp_actual:'actual', ventilador:'vent', swing:'swing', preset:'preset', display:'display', health:'health', apagar_en:'apagar', encender_en:'encender', status:'status'};
+function onMsg(topic, buf){
+  const sub = topic.slice(P.length); const key = MAP[sub]; if(!key) return;
+  let v = buf.toString().trim();
+  if(['temp','actual','apagar','encender'].includes(key)) v = parseFloat(v);
+  else if(key==='display'||key==='health') v = v.toUpperCase();
+  else v = v.toLowerCase();
+  if(key==='temp' && pendingTemp!=null) return;
+  S[key]=v;
+  if(key==='modo' && v && v!=='off'){ lastMode=v; store.set('aire.lastMode',v); }
+  if(key==='status') setConn(v==='online'?'ok':'bad', v==='online'?'Aire conectado':'Aire sin conexión');
+  render();
+}
+function connect(user, pass){
+  $('loginErr').textContent=''; setConn('', 'Conectando…');
+  if(typeof mqtt==='undefined'){ $('loginErr').textContent='No se pudo cargar la librería MQTT. Revisa la conexión a internet.'; return; }
+  if(client){ try{ client.end(true) }catch(e){} }
+  client = mqtt.connect(BROKER, {username:user, password:pass, clientId:'panel-'+Math.random().toString(16).slice(2,10), clean:true, reconnectPeriod:4000, connectTimeout:10000});
+  client.on('connect', ()=>{ showApp(); setConn(S.status==='online'?'ok':'', S.status==='online'?'Aire conectado':'Conectado'); client.subscribe(P+'#'); });
+  client.on('reconnect', ()=> setConn('', 'Reconectando…'));
+  client.on('offline', ()=> setConn('bad', 'Sin conexión'));
+  client.on('message', onMsg);
+  client.on('error', err=>{
+    const auth = err && (err.code===4 || err.code===5 || /auth|not authorized/i.test(err.message||''));
+    if(auth){ client.end(true); client=null; store.del('aire.pass'); showLogin(); $('loginErr').textContent='Usuario o contraseña incorrectos.'; setConn('bad','Sin conectar'); }
+    else setConn('bad','Error de conexión');
+  });
+}
+function showApp(){ $('loginView').hidden=true; $('appView').hidden=false; render(); }
+function showLogin(){ $('appView').hidden=true; $('loginView').hidden=false; }
+
+$('btnLogin').addEventListener('click', ()=>{
+  const u=$('user').value.trim(), p=$('pass').value;
+  if(!u||!p){ $('loginErr').textContent='Escribe el usuario y la contraseña.'; return; }
+  demo=false;
+  if($('remember').checked){ store.set('aire.user',u); store.set('aire.pass',p); } else { store.del('aire.user'); store.del('aire.pass'); }
+  connect(u,p);
+});
+$('btnDemo').addEventListener('click', ()=>{
+  demo=true; Object.assign(S,{status:'online', modo:'cool', temp:24, actual:27.5, vent:'auto', swing:'vertical', preset:'none', display:'ON', health:'OFF', apagar:90, encender:0});
+  setConn('ok','Demostración'); showApp();
+});
+$('btnLogout').addEventListener('click', ()=>{
+  if(client){ try{ client.end(true) }catch(e){} client=null; }
+  store.del('aire.pass'); demo=false; setConn('','Sin conectar'); $('pass').value=''; showLogin();
+});
+
+/* ---------- arranque ---------- */
+const su=store.get('aire.user'), sp=store.get('aire.pass');
+if(su) $('user').value=su;
+if(su && sp){ connect(su, sp); showApp(); } else showLogin();
+render();
+})();
+</script>
+</body>
+</html>
