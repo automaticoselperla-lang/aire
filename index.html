@@ -250,10 +250,10 @@ function buildSeg(el, items, withIcon, onPick){
     b.addEventListener('click',()=>onPick(v)); el.appendChild(b);
   });
 }
-buildSeg($('modes'), MODES, true, v=>{ pub('modo', v); optimistic('modo', v); });
-buildSeg($('fan'), FANS, false, v=>{ pub('ventilador', v); optimistic('vent', v); });
-buildSeg($('swing'), SWINGS, false, v=>{ pub('swing', v); optimistic('swing', v); });
-buildSeg($('preset'), PRESETS, false, v=>{ pub('preset', v); optimistic('preset', v); });
+buildSeg($('modes'), MODES, true, v=>{ if(pub('modo', v)) optimistic('modo', v); });
+buildSeg($('fan'), FANS, false, v=>{ if(pub('ventilador', v)) optimistic('vent', v); });
+buildSeg($('swing'), SWINGS, false, v=>{ if(pub('swing', v)) optimistic('swing', v); });
+buildSeg($('preset'), PRESETS, false, v=>{ if(pub('preset', v)) optimistic('preset', v); });
 
 function buildTimer(el, key, topic, title, verb){
   el.innerHTML =
@@ -267,32 +267,39 @@ function buildTimer(el, key, topic, title, verb){
 }
 buildTimer($('tOff'),'apagar','apagar_en','Apagar en','Programar');
 buildTimer($('tOn'),'encender','encender_en','Encender en','Programar');
-function setTimer(key, topic, m){ pub(topic, m); optimistic(key, m); toast(m? (key==='apagar'?'Se apagará en ':'Se encenderá en ')+fmtMin(m) : 'Temporizador cancelado'); }
+function setTimer(key, topic, m){
+  const ok = pub(topic, m, ()=>toast(m? (key==='apagar'?'Enviado: se apagará en ':'Enviado: se encenderá en ')+fmtMin(m) : 'Temporizador cancelado'));
+  if(ok) optimistic(key, m);
+}
 
 /* ---------- acciones ---------- */
-function pub(sub, val){
-  if(demo) return;
-  if(!client || !client.connected){ toast('Sin conexión con el servidor'); return; }
-  client.publish(P+sub+'/set', String(val), {qos:0, retain:false});
+function pub(sub, val, onOk){
+  if(demo){ if(onOk) onOk(); return true; }
+  if(!client || !client.connected){ toast('Sin conexión: la orden NO se ha enviado'); return false; }
+  client.publish(P+sub+'/set', String(val), {qos:1, retain:false}, err=>{
+    if(err) toast('Error al enviar la orden. Vuelve a intentarlo.');
+    else if(onOk) onOk();
+  });
+  return true;
 }
 function optimistic(k, v){ S[k]=v; if(k==='modo' && v!=='off'){ lastMode=v; store.set('aire.lastMode',v); } render(); }
 
 $('power').addEventListener('click',()=>{
   const on = S.modo && S.modo!=='off';
   const v = on? 'off' : lastMode;
-  pub('modo', v); optimistic('modo', v);
+  if(pub('modo', v)) optimistic('modo', v);
 });
 function nudge(d){
   const base = pendingTemp ?? S.temp ?? 24;
   const v = Math.max(MIN, Math.min(MAX, Math.round(base)+d));
   pendingTemp = v; render();
   clearTimeout(tempTimer);
-  tempTimer = setTimeout(()=>{ pub('temp', v); S.temp=v; pendingTemp=null; render(); }, 700);
+  tempTimer = setTimeout(()=>{ if(pub('temp', v)) S.temp=v; pendingTemp=null; render(); }, 700);
 }
 $('minus').addEventListener('click',()=>nudge(-1));
 $('plus').addEventListener('click',()=>nudge(1));
 function sw(id, topic, key){
-  $(id).addEventListener('click',()=>{ const v = S[key]==='ON' ? 'OFF':'ON'; pub(topic, v); optimistic(key, v); });
+  $(id).addEventListener('click',()=>{ const v = S[key]==='ON' ? 'OFF':'ON'; if(pub(topic, v)) optimistic(key, v); });
 }
 sw('swDisplay','display','display'); sw('swHealth','health','health');
 
