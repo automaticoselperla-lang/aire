@@ -268,7 +268,7 @@ function buildTimer(el, key, topic, title, verb){
 buildTimer($('tOff'),'apagar','apagar_en','Apagar en','Programar');
 buildTimer($('tOn'),'encender','encender_en','Encender en','Programar');
 function setTimer(key, topic, m){
-  const ok = pub(topic, m, ()=>toast(m? (key==='apagar'?'Enviado: se apagará en ':'Enviado: se encenderá en ')+fmtMin(m) : 'Temporizador cancelado'));
+  const ok = pub('temporizador', key+':'+m, ()=>toast(m? (key==='apagar'?'Enviado: se apagará en ':'Enviado: se encenderá en ')+fmtMin(m) : 'Temporizador cancelado'));
   if(ok) optimistic(key, m);
 }
 
